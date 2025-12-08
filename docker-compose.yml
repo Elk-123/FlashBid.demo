@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 数据库
+  db:
+    image: postgres:15-alpine
+    container_name: flashbid_pg
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: flashbid_db
+    ports:
+      - "5433:5432"  # 允许本机通过 localhost:5432 访问
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # 2. Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: flashbid_redis
+    restart: always
+    ports:
+      - "6379:6379"  # 允许本机通过 localhost:6379 访问
+    # 启用持久化 (AOF)，防止重启后所有数据丢失
+    command: redis-server --appendonly yes 
+    volumes:
+      - redis_data:/data
+
+volumes:
+  pg_data:
+  redis_data:

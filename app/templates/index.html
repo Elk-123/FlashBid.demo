@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>FlashBid 竞拍实战</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
+        .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .price-box { font-size: 48px; color: #e74c3c; font-weight: bold; margin: 20px 0; }
+        .user-box { color: #777; margin-bottom: 20px; }
+        button { background-color: #3498db; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #2980b9; transform: scale(1.05); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #log { margin-top: 20px; font-size: 12px; color: #888; text-align: left; height: 100px; overflow-y: scroll; border-top: 1px solid #eee; padding-top: 10px;}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🔥 极速竞拍 (Item-1)</h1>
+    <div class="price-box">¥ <span id="price">...</span></div>
+    <div class="user-box">当前赢家: <span id="winner">...</span></div>
+    
+    <div style="display: flex; gap: 10px; justify-content: center;">
+        <input type="number" id="bidAmount" placeholder="输入金额" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; width: 100px;">
+        <button onclick="placeBid()">💰 立即出价</button>
+    </div>
+    <div id="status" style="margin-top: 15px; height: 20px; color: green;"></div>
+</div>
+
+<div id="log" class="card">日志区域...</div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+    const ITEM_ID = 1;
+    const USER_ID = "Human-" + Math.floor(Math.random() * 1000); // 随机生成一个用户ID
+
+    // 1. 轮询获取最新价格 (每秒一次)
+    async function refreshPrice() {
+        try {
+            const res = await fetch(`${API_URL}/item/${ITEM_ID}`);
+            const data = await res.json();
+            document.getElementById('price').innerText = data.price;
+            document.getElementById('winner').innerText = data.user_id;
+            
+            // 自动把输入框填为 当前价 + 10
+            // document.getElementById('bidAmount').placeholder = parseFloat(data.price) + 10;
+        } catch (e) {
+            console.error("连接失败", e);
+        }
+    }
+
+    // 2. 出价动作
+    async function placeBid() {
+        const amount = parseFloat(document.getElementById('bidAmount').value);
+        if (!amount) {
+            alert("请输入金额！");
+            return;
+        }
+
+        const log = document.getElementById('log');
+        document.getElementById('status').innerText = "提交中...";
+
+        try {
+            const res = await fetch(`${API_URL}/bid`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    item_id: ITEM_ID,
+                    user_id: USER_ID,
+                    amount: amount
+                })
+            });
+            const data = await res.json();
+
+            if (data.status === 'accepted') {
+                document.getElementById('status').innerText = "✅ 出价成功！";
+                document.getElementById('status').style.color = "green";
+                log.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 我出价 ${amount} 成功</div>` + log.innerHTML;
+                refreshPrice(); // 立即刷新
+            } else {
+                document.getElementById('status').innerText = "❌ 出价失败 (价格低了)";
+                document.getElementById('status').style.color = "red";
+                log.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 我出价 ${amount} 失败: ${data.msg}</div>` + log.innerHTML;
+            }
+        } catch (e) {
+            alert("网络错误");
+        }
+    }
+
+    // 启动轮询
+    setInterval(refreshPrice, 1000);
+    refreshPrice();
+</script>
+
+</body>
+</html>
