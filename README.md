@@ -1,7 +1,3 @@
-这份文档不仅是你项目的**结项报告**，更是你未来面试时用来**展示技术深度**的绝佳素材。
-
----
-
 # 📘 FlashBid 高并发竞拍系统 - 项目结项报告
 
 ## 1. 项目简介 (Project Overview)
@@ -78,3 +74,95 @@
 FlashBid 项目证明了：在处理高并发、对一致性要求极高的业务场景（如秒杀、抢票、竞拍）时，**“数据库直接抗压”是行不通的**。
 
 必须引入 **Redis 做挡箭牌**，并利用其 **原子性特性** 处理核心逻辑，同时配合 **异步手段** 解耦非核心逻辑。这是通往高级后端架构师的必经之路。
+
+--- 
+## 5. 快速开始 (Quick Start)
+
+按照以下步骤即可在本地环境完整运行本项目。
+
+### 1. 环境准备与依赖安装
+首先激活 Python 虚拟环境，并安装 `requirements.txt` 中的依赖包。
+
+```bash
+# 1. 激活 Conda 环境 (如果没有创建，请先创建: conda create -n flashbid python=3.10)
+conda activate flashbid
+
+# 2. 安装项目依赖
+pip install -r requirements.txt
+```
+
+### 2. 启动基础设施 (Docker)
+使用 Docker Compose 启动 PostgreSQL 数据库和 Redis 缓存服务。
+
+```bash
+# 后台启动 Redis 和 Postgres 容器
+docker compose up -d
+
+# 查看容器状态（确保状态为 Up）
+docker compose ps
+```
+
+### 3. 环境连通性检查
+运行提供的脚本，确保 Python 代码能正常连接到 Docker 中的数据库组件。
+
+```bash
+python check_env.py
+```
+> **预期输出**:
+> * Testing Redis connection... ✅ Success!
+> * Testing PostgreSQL connection... ✅ Success!
+
+### 4. 核心逻辑验证 (无需启动 Web 服务)
+在不启动 Web 服务器的情况下，直接测试 Redis 的原子锁竞拍逻辑（模拟 Alice 和 Bob 的出价过程）。
+
+```bash
+python test_redis_logic.py
+```
+> **预期输出**: 
+> * 看到 Alice 出价成功，Bob 低价出价失败，Bob 高价出价再次成功的完整日志流。
+
+### 5. 启动 API 服务器 (FastAPI)
+启动 uvicorn 服务器，对外提供 HTTP 接口。
+
+```bash
+# 假设入口文件在 app/main.py
+uvicorn app.main:app --reload
+```
+*   **API 文档地址**: 打开浏览器访问 [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+
+--- 
+## 6. 安全退出与清理 (Safe Shutdown & Cleanup)
+
+测试完成后，建议按照以下步骤关闭服务并释放系统资源。
+
+### 1. 停止 Web 服务器
+在运行 `uvicorn` 的终端窗口中，按下组合键停止 Python 进程：
+> `Ctrl + C`
+
+### 2. 关闭基础设施 (Docker)
+根据您是否需要保留数据库数据，选择以下指令之一：
+
+*   **选项 A：暂停服务（保留数据）**
+    *   下次启动时，数据库和 Redis 中的数据依然存在。
+    ```bash
+    docker compose stop
+    ```
+
+*   **选项 B：移除容器（推荐）**
+    *   停止并删除容器网络，但保留数据卷（Volume）。
+    ```bash
+    docker compose down
+    ```
+
+*   **选项 C：彻底重置（清空数据）**
+    *   停止容器并**删除数据库所有数据**。下次启动相当于一个全新的系统。
+    ```bash
+    docker compose down -v
+    ```
+
+### 3. 退出虚拟环境
+最后，退出当前的 Conda Python 环境：
+```bash
+conda deactivate
+``` 
